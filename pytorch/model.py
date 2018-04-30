@@ -5,7 +5,6 @@ from torchvision.utils import save_image
 
 import matplotlib.pyplot as plt
 plt.style.use('seaborn')
-
 import pandas as pd
 from tqdm import tqdm
 
@@ -132,6 +131,8 @@ class MNISTClassifier(object):
         self.log[['acc', 'val_acc']].plot(ax=ax)
         fig.tight_layout()
         fig.savefig(str(self.ckpt_dir / 'acc.jpg'))
+        # Close plot to prevent RE
+        plt.close()
         # model
         torch.save(self.model, str(self.epoch_dir / 'model.pth'))
 
