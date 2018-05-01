@@ -15,10 +15,10 @@ class MNISTModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            self._make_conv(1, 8, kernel=3, stride=2, act='relu'),
-            self._make_conv(8, 32, kernel=3, stride=2, act='relu'),
-            self._make_conv(32, 16, kernel=3, stride=1, act='relu'),
-            self._make_conv(16, 10, kernel=3, stride=1, act='relu'),
+            self._make_conv(1, 8, kernel=3, stride=2, act='leaky_relu'),
+            self._make_conv(8, 32, kernel=3, stride=2, act='leaky_relu'),
+            self._make_conv(32, 16, kernel=3, stride=1, act='leaky_relu'),
+            self._make_conv(16, 10, kernel=3, stride=1, act='leaky_relu'),
             self._make_conv(10, 10, kernel=2, stride=1),
         )
 
@@ -27,7 +27,10 @@ class MNISTModel(nn.Module):
         layers.append(nn.BatchNorm2d(out_c))
         if act == 'relu':
             layers.append(nn.ReLU())
-            nn.init.kaiming_normal_(layers[0].weight)
+            nn.init.kaiming_normal_(layers[0].weight, nonlinearity='relu')
+        elif act == 'leaky_relu':
+            layers.append(nn.LeakyReLU())
+            nn.init.kaiming_normal_(layers[0].weight, nonlinearity='leaky_relu')
         elif act is None:
             nn.init.xavier_normal_(layers[0].weight)
         return nn.Sequential(*layers)
