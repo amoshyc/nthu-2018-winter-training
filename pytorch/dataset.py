@@ -1,4 +1,5 @@
 import pathlib
+from torch.utils.data.dataset import Subset, ConcatDataset
 from torchvision import datasets
 from torchvision import transforms
 
@@ -9,7 +10,7 @@ VALID_DIR = './mnist/valid/'
 
 
 def restore(img):
-    return img * MNIST_STD + MNIST_MEAN
+    return img * MNIST_STD[0] + MNIST_MEAN[0]
 
 
 MNISTtrain = datasets.MNIST(TRAIN_DIR,
@@ -30,3 +31,7 @@ MNISTvalid = datasets.MNIST(VALID_DIR,
     ])
 )
 
+MNISTvis = ConcatDataset([
+    Subset(MNISTtrain, list(range(50))),
+    Subset(MNISTvalid, list(range(50))),
+])

@@ -1,13 +1,14 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from torch.utils.data.dataset import Subset, ConcatDataset
 from torchvision.utils import save_image
 
 import matplotlib.pyplot as plt
 plt.style.use('seaborn')
 import pandas as pd
 from tqdm import tqdm
+
+from dataset import restore
 
 
 class MNISTModel(nn.Module):
@@ -125,7 +126,7 @@ class MNISTClassifier(object):
             for img, lbl, prd in zip(img_batch, lbl_batch, prd_batch):
                 filename = f'{idx:05d} - pred {prd} - lbl {lbl}.jpg'
                 img_path = self.epoch_dir / filename
-                save_image(img, str(img_path))
+                save_image(restore(img), str(img_path))
                 idx += 1
 
     def _log(self):
@@ -148,11 +149,7 @@ class MNISTClassifier(object):
         # model
         torch.save(self.model, str(self.epoch_dir / 'model.pth'))
 
-    def fit(self, train_dataset, valid_dataset, epoch=50):
-        vis_dataset = ConcatDataset([
-            Subset(train_dataset, list(range(50))),
-            Subset(valid_dataset, list(range(50))),
-        ])
+    def fit(self, train_dataset, valid_dataset, vis_dataset, epoch=50):
         self.train_loader = DataLoader(train_dataset,
                 batch_size=64, shuffle=True, num_workers=3)
         self.valid_loader = DataLoader(valid_dataset,
