@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from torch.utils.data.dataset import Subset, ConcatDataset
 from torchvision.utils import save_image
 
 import matplotlib.pyplot as plt
@@ -83,9 +84,9 @@ class MNISTClassifier(object):
             loss.backward()
             self.optimizer.step()
 
-            pred_batch = torch.argmax(torch.squeeze(out_batch), dim=1)
-            corrects = (pred_batch == lbl_batch).sum().float()
-            accuracy = corrects / self.train_loader.batch_size
+            prd_batch = torch.argmax(out_batch, dim=1)
+            corrects = (prd_batch == lbl_batch).sum().float()
+            accuracy = corrects / img_batch.size(0)
 
             self.msg['loss'].update(loss)
             self.msg['acc'].update(accuracy)
@@ -105,16 +106,27 @@ class MNISTClassifier(object):
             out_batch = self.model(img_batch).squeeze()
             loss = self.criterion(out_batch, lbl_batch)
 
-            pred_batch = torch.argmax(torch.squeeze(out_batch), dim=1)
-            corrects = (pred_batch == lbl_batch).sum().float()
-            accuracy = corrects / self.valid_loader.batch_size
+            prd_batch = torch.argmax(out_batch, dim=1)
+            corrects = (prd_batch == lbl_batch).sum().float()
+            accuracy = corrects / img_batch.size(0)
 
             self.msg['val_loss'].update(loss)
             self.msg['val_acc'].update(accuracy)
         self.pbar.set_postfix(**self.msg)
 
     def _vis(self):
-        pass
+        self.model.eval()
+        idx = 0
+        for img_batch, lbl_batch in iter(self.vis_loader):
+            img_batch = img_batch.to(self.device)
+            lbl_batch = lbl_batch.to(self.device)
+            out_batch = self.model(img_batch).squeeze()
+            prd_batch = torch.argmax(out_batch, dim=1)
+            for img, lbl, prd in zip(img_batch, lbl_batch, prd_batch):
+                filename = f'{idx:05d} - pred {prd} - lbl {lbl}.jpg'
+                img_path = self.epoch_dir / filename
+                save_image(img, str(img_path))
+                idx += 1
 
     def _log(self):
         # log
@@ -137,10 +149,16 @@ class MNISTClassifier(object):
         torch.save(self.model, str(self.epoch_dir / 'model.pth'))
 
     def fit(self, train_dataset, valid_dataset, epoch=50):
+        vis_dataset = ConcatDataset([
+            Subset(train_dataset, list(range(50))),
+            Subset(valid_dataset, list(range(50))),
+        ])
         self.train_loader = DataLoader(train_dataset,
                 batch_size=64, shuffle=True, num_workers=3)
         self.valid_loader = DataLoader(valid_dataset,
                 batch_size=64, shuffle=False, num_workers=3)
+        self.vis_loader = DataLoader(vis_dataset,
+                batch_size=32, shuffle=False, num_workers=1)
 
         self.log = pd.DataFrame()
         for ep in range(epoch):
@@ -157,5 +175,5 @@ class MNISTClassifier(object):
                 self._train()
                 with torch.no_grad():
                     self._valid()
-                    # self._vis()
+                    self._vis()
                     self._log()
